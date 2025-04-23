@@ -2,31 +2,31 @@ const SPREADSHEET_ID = '1bUoL506VOHQTciNt5Z6bKUNoid2t-HJMd0DFFF_W_nk';
 const AUDITSHEET_NAME = 'audits';
 const API_KEY = 'myKey';
 
-function getDataSheet(){
+function getDataSheet() {
     return SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(AUDITSHEET_NAME);
 }
 
-function isAuth(providedKey){
-    if (providedKey == API_KEY){
+function isAuth(providedKey) {
+    if (providedKey == API_KEY) {
         return true
     }
     return false;
 }
 
-function jsonResponse(status, message, data = null){
+function jsonResponse(status, message, data = null) {
     const output = ContentService.createTextOutput(JSON.stringify({
-        status : status ,
-        message : message,
-        data : data
+        status: status,
+        message: message,
+        data: data
     })).setMimeType(ContentService.MimeType.JSON);
     Logger.log(JSON.stringify(data));
     return output;
 }
 
-function checkInputsCompletion(fieldsToFill){
+function checkInputsCompletion(fieldsToFill) {
     let completionTestOK = true;
     fieldsToFill.forEach(element => {
-        if (element == null){
+        if (element == null) {
             completionTestOK = false;
         }
     });
@@ -37,7 +37,7 @@ function checkInputsCompletion(fieldsToFill){
 function doGet(e) {
     const parameters = e.parameters;
 
-    if (!isAuth(parameters.key)){
+    if (!isAuth(parameters.key)) {
         return jsonResponse(401, 'key not provided');
     }
 
@@ -46,43 +46,43 @@ function doGet(e) {
     const headers = datas[0];
 
     let records = datas.slice(1).map((row) => {
-            let obj = {}
-            headers.forEach((key, indexKey) => {
-                    obj[key] = row[indexKey];                        
-                }
-            )
-            return obj
+        let obj = {}
+        headers.forEach((key, indexKey) => {
+            obj[key] = row[indexKey];
         }
+        )
+        return obj
+    }
     );
-    
+
     Object.entries(parameters).forEach(([key, value]) => {
-        if(key != "key"){
+        if (key != "key") {
             headers.forEach((headerKey) => {
-                if (headerKey == key){
-                    records = records.filter( (record) => (record[key] == value));
+                if (headerKey == key) {
+                    records = records.filter((record) => (record[key] == value));
                 }
             })
 
         }
     });
 
-    if (records.length == 0){
+    if (records.length == 0) {
         return jsonResponse(200, "no record match your request");
     }
-    return jsonResponse(200,"GET query OK", records)
+    return jsonResponse(200, "GET query OK", records)
 
 }
 
-function doPost(e){
+function doPost(e) {
     const dataSheet = getDataSheet();
     const params = JSON.parse(e.postData.contents);
     const providedKey = params.key;
 
-    if (!isAuth(providedKey)){
+    if (!isAuth(providedKey)) {
         return jsonResponse(401, 'key not provided');
     }
-    
-    switch(params.method){
+
+    switch (params.method) {
         case 'POST':
             return handlePost(e, dataSheet);
             break;
@@ -97,40 +97,40 @@ function doPost(e){
     }
 }
 
-function handlePost(e, dataSheet){
+function handlePost(e, dataSheet) {
     const params = JSON.parse(e.postData.contents);
     const idParam = Date.now();
 
-    if(!checkInputsCompletion([params.client, params.date, params.reason, params.status, params.comment])){
+    if (!checkInputsCompletion([params.client, params.date, params.reason, params.status, params.comment])) {
         return jsonResponse(404, 'required fiels not filled');
     }
 
     const rowContent = [idParam, params.client, params.date, params.reason, params.status, params.comment];
 
     try {
-        dataSheet.appendRow(rowContent);        
+        dataSheet.appendRow(rowContent);
     } catch (error) {
         return jsonResponse(404, 'row not added' + error);
     }
 
     const addedAudit = {
-        "id" : idParam,
-        "client" : params.client,
-        "date" : params.date,
-        "reason" : params.reason,
-        "status" : params.status,
-        "comment" : params.comment
+        "id": idParam,
+        "client": params.client,
+        "date": params.date,
+        "reason": params.reason,
+        "status": params.status,
+        "comment": params.comment
     };
 
-    return jsonResponse(200,"audit created", addedAudit);
+    return jsonResponse(200, "audit created", addedAudit);
 
 }
 
-function handlePut(e, dataSheet){
+function handlePut(e, dataSheet) {
     const params = JSON.parse(e.postData.contents);
     let rowContent = [params.id, params.client, params.date, params.reason, params.status, params.comment];
 
-    if(!checkInputsCompletion(rowContent)){
+    if (!checkInputsCompletion(rowContent)) {
         return jsonResponse(404, 'required fiedls not filled');
     }
 
@@ -139,14 +139,14 @@ function handlePut(e, dataSheet){
     let indexRowToUpdate = null;
     const idValues = idRange.getValues();
 
-    for (let i =0; i< idValues.length;i++){
-        if (idValues[i] == params.id){
-            indexRowToUpdate = i+2;
-            dataSheet.getRange(indexRowToUpdate,1,1,6).setValues([rowContent]);
+    for (let i = 0; i < idValues.length; i++) {
+        if (idValues[i] == params.id) {
+            indexRowToUpdate = i + 2;
+            dataSheet.getRange(indexRowToUpdate, 1, 1, 6).setValues([rowContent]);
         }
     }
 
-    if (indexRowToUpdate == null){
+    if (indexRowToUpdate == null) {
         return jsonResponse(404, "id to update not found");
     }
 
@@ -154,7 +154,7 @@ function handlePut(e, dataSheet){
 
 }
 
-function handleDelete(e, dataSheet){
+function handleDelete(e, dataSheet) {
     const datas = dataSheet.getDataRange().getValues();
     const params = JSON.parse(e.postData.contents);
     const headers = datas[0];
@@ -163,17 +163,17 @@ function handleDelete(e, dataSheet){
     let indexRowToDelete = null;
     const deleteObj = {};
     const idValues = idRange.getValues();
-    
-    for (let i =0; i< idValues.length;i++){
-        if (idValues[i] == params.id){
-            indexRowToDelete = i+2;
-            headers.forEach((key,indexKey) => {
-                deleteObj[key] = datas[i+1][indexKey]; 
+
+    for (let i = 0; i < idValues.length; i++) {
+        if (idValues[i] == params.id) {
+            indexRowToDelete = i + 2;
+            headers.forEach((key, indexKey) => {
+                deleteObj[key] = datas[i + 1][indexKey];
             });
         }
     }
-    
-    if (indexRowToDelete == null){
+
+    if (indexRowToDelete == null) {
         return jsonResponse(404, "id to delete not found");
     }
 
@@ -188,7 +188,7 @@ function handleDelete(e, dataSheet){
 }
 
 ////////// BACK FUNCTION TO BA CALLED FROM FRONT (AS FETCH FORBIDDEN FROM WEB APP GAS  (BUT NOT FROM REACH....))//////
-
-function callApiGet(e){
-    return doGet(e);
-}
+//
+//function callApiGet(e){
+//  return doGet(e);
+//}
